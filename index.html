@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>술자리 3문(門) 눈치게임</title>
+  
+  <!-- 카카오톡 인앱 브라우저 자동 탈출 스크립트 -->
+  <script>
+    (function() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const targetUrl = window.location.href;
+      if (/KAKAOTALK/i.test(ua)) {
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+          window.location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(targetUrl);
+        } else {
+          window.location.href = 'intent://' + targetUrl.replace(/https?:\/\//i, '') + '#Intent;scheme=http;package=com.android.chrome;end';
+        }
+      }
+    })();
+  </script>
+
+  <!-- Firebase v8 SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    body {
+      background-color: #0b0c10;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #app-container {
+      width: 100%;
+      max-width: 420px;
+      height: 100vh;
+      max-height: 840px;
+      background: #14161f;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,0,0,0.9);
+    }
+
+    .screen {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      padding: 24px 20px;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #ffd700;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+    }
+
+    .subtitle {
+      font-size: 0.88rem;
+      color: #8c92a4;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .card-box {
+      width: 100%;
+      background: #1e2230;
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border: 1px solid #2d3246;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #3b425b;
+      background: #10121a;
+      color: #fff;
+      font-size: 1rem;
+      text-align: center;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #ffd700;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      font-size: 1.05rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.05s, opacity 0.2s;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary { background: #ffd700; color: #111; }
+    .btn-secondary { background: #2c3246; color: #fff; }
+    .btn-danger { background: #ff4757; color: #fff; }
+
+    /* 대기실 목록 */
+    .player-list-box {
+      width: 100%;
+      flex: 1;
+      background: #181b26;
+      border-radius: 12px;
+      padding: 12px;
+      overflow-y: auto;
+      margin: 15px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border: 1px solid #262b3d;
+    }
+
+    .player-row {
+      background: #232838;
+      padding: 10px 14px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+    .player-row.me {
+      border: 1px solid #ffd700;
+      color: #ffd700;
+      font-weight: bold;
+    }
+    .host-tag {
+      background: #ffd700;
+      color: #111;
+      font-size: 0.72rem;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* 문 선택 */
+    .timer-header {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #ff4757;
+      text-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+    }
+
+    .door-grid {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 10px 0;
+    }
+
+    .door-button {
+      width: 100%;
+      height: 86px;
+      background: linear-gradient(145deg, #242a3c, #191c28);
+      border: 2px solid #363e58;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .door-button.selected {
+      border-color: #ffd700;
+      background: #393217;
+      box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
+    }
+
+    .penalty-preview-box {
+      width: 100%;
+      background: #231c26;
+      border: 1px dashed #ff4757;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      font-size: 1.02rem;
+      font-weight: bold;
+      color: #ff7675;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 3초 긴장 대기 */
+    .reveal-big-num {
+      font-size: 4.5rem;
+      font-weight: 900;
+      color: #ffd700;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      50% { transform: scale(1.12); opacity: 1; text-shadow: 0 0 20px #ffd700; }
+      100% { transform: scale(0.95); opacity: 0.9; }
+    }
+
+    /* 결과 카드 */
+    .result-row-card {
+      width: 100%;
+      background: #1f2333;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 6px solid #4b5366;
+    }
+    .result-row-card.trap {
+      border-left-color: #ff4757;
+      background: #2e1b23;
+    }
+    .result-row-card.safe {
+      border-left-color: #2ed573;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- 1. 메인 화면 -->
+  <div id="screen-main" class="screen active">
+    <div>
+      <h1>🚪 3문(門) 눈치게임</h1>
+      <p class="subtitle">다수가 몰리면 터지는 실시간 술게임</p>
+    </div>
+
+    <div class="card-box">
+      <input type="text" id="input-nickname" placeholder="닉네임 입력 (최대 6자)" maxlength="6">
+      <button class="btn btn-primary" id="btn-create-room">👑 새 방 만들기</button>
+      
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <input type="text" id="input-room-code" placeholder="방 코드 4자리" maxlength="4" style="flex:1;">
+        <button class="btn btn-secondary" id="btn-join-room" style="flex:1;">🚪 입장</button>
+      </div>
+    </div>
+
+    <p style="font-size:0.8rem; color:#686f84; text-align:center;">최소 3명 ~ 최대 15명 동시 지원</p>
+  </div>
+
+  <!-- 2. 대기실 화면 -->
+  <div id="screen-lobby" class="screen">
+    <div>
+      <p class="subtitle">초대 코드</p>
+      <h1 id="lobby-room-code" style="font-size: 2.5rem; letter-spacing: 5px;">----</h1>
+    </div>
+
+    <div class="player-list-box">
+      <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#8c92a4; margin-bottom:4px;">
+        <span>참가자 현황</span>
+        <span id="lobby-player-count">0 / 15명</span>
+      </div>
+      <div id="lobby-players-list"></div>
+    </div>
+
+    <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+      <div id="lobby-guide-msg" style="text-align:center; font-size:0.85rem; color:#a2a8ba;"></div>
+      <button class="btn btn-primary" id="btn-start-game" disabled>🚀 게임 시작 (방장 전용)</button>
+      <button class="btn btn-secondary" id="btn-leave-room">방 나가기</button>
+    </div>
+  </div>
+
+  <!-- 3. 선택 단계 (PLAYING) -->
+  <div id="screen-game" class="screen">
+    <div style="text-align:center;">
+      <div class="timer-header" id="game-timer">5</div>
+      <p class="subtitle">피하고 싶은 문 1개를 빠르게 선택하세요!</p>
+    </div>
+
+    <div class="door-grid">
+      <button class="door-button" id="door-1" data-num="1">🚪 1번 문</button>
+      <button class="door-button" id="door-2" data-num="2">🚪 2번 문</button>
+      <button class="door-button" id="door-3" data-num="3">🚪 3번 문</button>
+    </div>
+
+    <div class="penalty-preview-box" id="my-penalty-display">
+      문을 선택하면 내 벌칙이 즉시 공개됩니다.
+    </div>
+  </div>
+
+  <!-- 4. 3초 대기 화면 (REVEAL) -->
+  <div id="screen-reveal" class="screen" style="justify-content:center; gap:22px;">
+    <p class="subtitle" style="font-size:1.1rem; color:#ffd700;">전원 선택 완료!</p>
+    <div class="reveal-big-num" id="reveal-timer-num">3</div>
+    <div class="penalty-preview-box" id="reveal-my-penalty-box" style="width:90%;">
+      내 방 벌칙 확인 중...
+    </div>
+    <p style="font-size:0.85rem; color:#8c92a4; text-align:center;">잠시 후 최다 득표 함정 방이 공개됩니다!</p>
+  </div>
+
+  <!-- 5. 최종 결과 화면 (RESULT) -->
+  <div id="screen-result" class="screen">
+    <div style="text-align:center;">
+      <h1>💥 결과 발표</h1>
+      <p class="subtitle">가장 많은 사람이 들어간 문이 함정입니다!</p>
+    </div>
+
+    <div style="width:100%; display:flex; flex-direction:column; gap:10px;" id="result-cards-container"></div>
+
+    <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+      <button class="btn btn-primary" id="btn-next-round" style="display:none;">🔄 다음 판 시작 (방장)</button>
+      <p id="result-wait-msg" style="text-align:center; font-size:0.85rem; color:#aaa; display:none;">방장이 다음 판을 준비하고 있습니다...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // 🔥 전달해주신 Firebase 설정이 정상 적용되었습니다.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCl58pNX7c9h3XSPoIuVkYmA-gGQwVv0fo",
+    authDomain: "door-games.firebaseapp.com",
+    databaseURL: "https://door-games-default-rtdb.firebaseio.com",
+    projectId: "door-games",
+    storageBucket: "door-games.firebasestorage.app",
+    messagingSenderId: "31418414822",
+    appId: "1:31418414822:web:727be266afd8fb894f6d27"
+  };
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  const db = firebase.database();
+
+  // ----------------------------------------------------
+  // 전역 상태
+  // ----------------------------------------------------
+  const myId = 'user_' + Math.random().toString(36).substr(2, 9);
+  let myNickname = '';
+  let currentRoomCode = '';
+  let isHost = false;
+  let myChoice = 0;
+  let gameCountdownTimer = null;
+  let roomListener = null;
+
+  function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+  }
+
+  // 1~5잔 랜덤 셔플
+  function generatePenalties() {
+    const list = [1, 2, 3, 4, 5];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return {
+      door1: `🍺 소주 ${list[0]}잔`,
+      door2: `🍻 소주 ${list[1]}잔`,
+      door3: `💥 소주 ${list[2]}잔!`
+    };
+  }
+
+  // 방 만들기
+  function createRoom() {
+    const name = document.getElementById('input-nickname').value.trim();
+    if (!name) return alert('닉네임을 입력해 주세요!');
+    myNickname = name;
+    isHost = true;
+
+    currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const roomRef = db.ref('rooms/' + currentRoomCode);
+
+    roomRef.set({
+      hostId: myId,
+      status: 'WAITING',
+      round: 1,
+      doorPenalties: generatePenalties(),
+      players: {
+        [myId]: { name: myNickname, choice: 0, isHost: true }
+      }
+    }).then(() => {
+      listenRoom(currentRoomCode);
+      showScreen('screen-lobby');
+    });
+  }
+
+  // 방 입장
+  function joinRoom() {
+    const name = document.getElementById('input-nickname').value.trim();
+    const code = document.getElementById('input-room-code').value.trim();
+    if (!name) return alert('닉네임을 입력해 주세요!');
+    if (!code || code.length !== 4) return alert('4자리 방 코드를 입력해 주세요!');
+    myNickname = name;
+
+    const roomRef = db.ref('rooms/' + code);
+    roomRef.once('value', snap => {
+      const room = snap.val();
+      if (!room) return alert('존재하지 않는 방입니다.');
+      if (room.status !== 'WAITING') return alert('이미 게임이 진행 중입니다.');
+
+      const players = room.players || {};
+      if (Object.keys(players).length >= 15) return alert('방 인원이 가득 찼습니다 (최대 15명).');
+
+      isHost = (room.hostId === myId);
+      currentRoomCode = code;
+
+      roomRef.child('players/' + myId).set({
+        name: myNickname,
+        choice: 0,
+        isHost: isHost
+      }).then(() => {
+        listenRoom(currentRoomCode);
+        showScreen('screen-lobby');
+      });
+    });
+  }
+
+  // 실시간 동기화
+  function listenRoom(code) {
+    if (roomListener) roomListener.off();
+    const roomRef = db.ref('rooms/' + code);
+    roomListener = roomRef;
+
+    roomRef.on('value', snap => {
+      const room = snap.val();
+      if (!room) return;
+
+      const players = room.players || {};
+      const playerList = Object.keys(players).map(k => ({ id: k, ...players[k] }));
+      const playerCount = playerList.length;
+
+      // 1. 대기실 (WAITING)
+      if (room.status === 'WAITING') {
+        document.getElementById('lobby-room-code').innerText = code;
+        document.getElementById('lobby-player-count').innerText = `${playerCount} / 15명`;
+
+        const listEl = document.getElementById('lobby-players-list');
+        listEl.innerHTML = '';
+        playerList.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'player-row' + (p.id === myId ? ' me' : '');
+          div.innerHTML = `
+            <span>${p.name} ${p.id === myId ? '(나)' : ''}</span>
+            ${p.isHost ? '<span class="host-tag">방장</span>' : ''}
+          `;
+          listEl.appendChild(div);
+        });
+
+        const startBtn = document.getElementById('btn-start-game');
+        const guideMsg = document.getElementById('lobby-guide-msg');
+        if (isHost) {
+          startBtn.style.display = 'block';
+          if (playerCount >= 3) {
+            startBtn.disabled = false;
+            guideMsg.innerText = '인원이 모였습니다! 시작 버튼을 누르세요.';
+          } else {
+            startBtn.disabled = true;
+            guideMsg.innerText = `최소 3명 이상 모여야 합니다 (현재 ${playerCount}명)`;
+          }
+        } else {
+          startBtn.style.display = 'none';
+          guideMsg.innerText = '방장이 게임을 시작하기를 기다리는 중...';
+        }
+
+        myChoice = 0;
+        showScreen('screen-lobby');
+      }
+
+      // 2. 문 선택 (PLAYING)
+      if (room.status === 'PLAYING') {
+        showScreen('screen-game');
+        resetDoorUI();
+        startChoiceCountdown(roomRef, playerList);
+      }
+
+      // 3. 3초 대기 (REVEAL)
+      if (room.status === 'REVEAL') {
+        clearInterval(gameCountdownTimer);
+        showScreen('screen-reveal');
+
+        const penalties = room.doorPenalties || {};
+        if (myChoice > 0) {
+          document.getElementById('reveal-my-penalty-box').innerText = `내 선택: ${myChoice}번 문 (${penalties['door' + myChoice]})`;
+        } else {
+          document.getElementById('reveal-my-penalty-box').innerText = `선택하지 못함 (미선택)`;
+        }
+
+        if (isHost && !room.revealLock) {
+          roomRef.update({ revealLock: true });
+          let waitCount = 3;
+          document.getElementById('reveal-timer-num').innerText = waitCount;
+          const waitInterval = setInterval(() => {
+            waitCount--;
+            if (waitCount > 0) {
+              document.getElementById('reveal-timer-num').innerText = waitCount;
+            } else {
+              clearInterval(waitInterval);
+              roomRef.update({ status: 'RESULT' });
+            }
+          }, 1000);
+        }
+      }
+
+      // 4. 결과 발표 (RESULT)
+      if (room.status === 'RESULT') {
+        showScreen('screen-result');
+        renderResult(room, playerList);
+      }
+    });
+  }
+
+  // 선택 타이머 (5초)
+  function startChoiceCountdown(roomRef, playerList) {
+    let timeLeft = 5;
+    document.getElementById('game-timer').innerText = timeLeft;
+    clearInterval(gameCountdownTimer);
+
+    gameCountdownTimer = setInterval(() => {
+      timeLeft--;
+      document.getElementById('game-timer').innerText = timeLeft;
+
+      if (isHost) {
+        const allAnswered = playerList.every(p => p.choice > 0);
+        if (allAnswered || timeLeft <= 0) {
+          clearInterval(gameCountdownTimer);
+          roomRef.update({ status: 'REVEAL', revealLock: false });
+        }
+      }
+
+      if (timeLeft <= 0) {
+        clearInterval(gameCountdownTimer);
+      }
+    }, 1000);
+  }
+
+  function resetDoorUI() {
+    document.querySelectorAll('.door-button').forEach(b => b.classList.remove('selected'));
+    document.getElementById('my-penalty-display').innerText = '문을 선택하면 내 벌칙이 즉시 공개됩니다.';
+  }
+
+  function selectDoor(num) {
+    if (myChoice > 0) return;
+    myChoice = num;
+
+    document.querySelectorAll('.door-button').forEach(b => b.classList.remove('selected'));
+    document.getElementById('door-' + num).classList.add('selected');
+
+    db.ref(`rooms/${currentRoomCode}/players/${myId}/choice`).set(num);
+
+    db.ref(`rooms/${currentRoomCode}/doorPenalties/door${num}`).once('value', snap => {
+      const pen = snap.val();
+      document.getElementById('my-penalty-display').innerText = `내 선택: ${num}번 문 ➔ ${pen}!`;
+    });
+  }
+
+  // 결과 집계 및 판정
+  function renderResult(room, playerList) {
+    const counts = { 1: 0, 2: 0, 3: 0 };
+    const members = { 1: [], 2: [], 3: [] };
+
+    playerList.forEach(p => {
+      if (p.choice >= 1 && p.choice <= 3) {
+        counts[p.choice]++;
+        members[p.choice].push(p.name);
+      }
+    });
+
+    const maxCount = Math.max(counts[1], counts[2], counts[3]);
+    const penalties = room.doorPenalties || {};
+    const container = document.getElementById('result-cards-container');
+    container.innerHTML = '';
+
+    for (let i = 1; i <= 3; i++) {
+      const isTrap = (counts[i] === maxCount && maxCount > 0);
+      const div = document.createElement('div');
+      div.className = `result-row-card ${isTrap ? 'trap' : 'safe'}`;
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:bold; font-size:1.1rem; color:${isTrap ? '#ff4757' : '#2ed573'};">
+            🚪 ${i}번 문 (${counts[i]}명) ${isTrap ? '💥 당첨(함정)' : '🥳 생존'}
+          </div>
+          <div style="font-size:0.85rem; color:#aaa; margin-top:3px;">
+            ${members[i].length > 0 ? members[i].join(', ') : '선택자 없음'}
+          </div>
+        </div>
+        <div style="font-weight:bold; font-size:1rem; color:#ffd700; text-align:right;">
+          ${penalties['door' + i]}
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    const nextBtn = document.getElementById('btn-next-round');
+    const waitMsg = document.getElementById('result-wait-msg');
+    if (isHost) {
+      nextBtn.style.display = 'block';
+      waitMsg.style.display = 'none';
+    } else {
+      nextBtn.style.display = 'none';
+      waitMsg.style.display = 'block';
+    }
+  }
+
+  // 다음 판 진행
+  function nextRound() {
+    if (!isHost) return;
+    const roomRef = db.ref('rooms/' + currentRoomCode);
+
+    roomRef.child('players').once('value', snap => {
+      const players = snap.val() || {};
+      const updates = {};
+      Object.keys(players).forEach(pid => {
+        updates[`players/${pid}/choice`] = 0;
+      });
+      updates['status'] = 'PLAYING';
+      updates['doorPenalties'] = generatePenalties();
+      updates['revealLock'] = false;
+      roomRef.update(updates);
+    });
+  }
+
+  // pointerdown 초고속 터치 바인딩
+  document.getElementById('btn-create-room').addEventListener('pointerdown', createRoom);
+  document.getElementById('btn-join-room').addEventListener('pointerdown', joinRoom);
+  document.getElementById('btn-start-game').addEventListener('pointerdown', () => { if (isHost) nextRound(); });
+  document.getElementById('btn-next-round').addEventListener('pointerdown', nextRound);
+
+  [1, 2, 3].forEach(num => {
+    document.getElementById('door-' + num).addEventListener('pointerdown', () => selectDoor(num));
+  });
+
+  document.getElementById('btn-leave-room').addEventListener('pointerdown', () => {
+    if (currentRoomCode) {
+      db.ref(`rooms/${currentRoomCode}/players/${myId}`).remove();
+    }
+    location.reload();
+  });
+</script>
+
+</body>
+</html>
