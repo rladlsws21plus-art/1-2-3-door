@@ -200,47 +200,74 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
       margin: 8px 0;
     }
 
+    /* 문 선택 버튼 및 바로 아래 벌칙 뱃지 */
     .door-button {
       width: 100%;
-      height: 74px;
+      min-height: 82px;
       background: linear-gradient(145deg, #242a3c, #191c28);
       border: 2px solid #363e58;
       border-radius: 14px;
       color: #fff;
-      font-size: 1.2rem;
-      font-weight: bold;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
+      padding: 10px;
+      gap: 6px;
+    }
+    .door-button-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    .door-sub-penalty {
+      display: none;
+      background: #ff4757;
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+      pointer-events: none;
+      animation: popIn 0.2s ease-out;
     }
     .door-button.selected {
       border-color: #ffd700;
-      background: #393217;
-      box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
+      background: #342d18;
+      box-shadow: 0 0 18px rgba(255, 215, 0, 0.5);
+    }
+    .door-button.selected .door-sub-penalty {
+      display: inline-block;
+    }
+    .door-button.unselected {
+      opacity: 0.4;
     }
     .door-button:disabled {
-      opacity: 0.5;
       cursor: default;
     }
 
-    .penalty-preview-box {
+    @keyframes popIn {
+      0% { transform: scale(0.85); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .info-footer-box {
       width: 100%;
-      background: #231c26;
-      border: 1px dashed #ff4757;
+      background: #181b28;
+      border: 1px solid #2d3348;
       border-radius: 10px;
       padding: 12px;
       text-align: center;
-      font-size: 0.95rem;
-      font-weight: bold;
-      color: #ff7675;
-      min-height: 48px;
+      font-size: 0.9rem;
+      color: #a4adc5;
+      min-height: 46px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -280,6 +307,11 @@
       border-left-color: #ff4757;
       background: #2e1b23;
     }
+    .result-row-card.final-loser {
+      border-left-color: #ff3838;
+      background: #401016;
+      box-shadow: 0 0 15px rgba(255, 56, 56, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -290,7 +322,7 @@
   <div id="screen-main" class="screen active">
     <div>
       <h1>🚪 3문(門) 눈치게임</h1>
-      <p class="subtitle">다수파는 탈출! 최후의 1인이 벌칙 독박!</p>
+      <p class="subtitle">다수파는 탈출! 1명이 남으면 즉시 벌칙 확정!</p>
     </div>
 
     <div class="card-box">
@@ -338,20 +370,38 @@
 
     <!-- 3문 모드 -->
     <div class="door-grid" id="door-selection-container">
-      <button class="door-button choice-btn" id="door-1" data-num="1">🚪 1번 문</button>
-      <button class="door-button choice-btn" id="door-2" data-num="2">🚪 2번 문</button>
-      <button class="door-button choice-btn" id="door-3" data-num="3">🚪 3번 문</button>
+      <button class="door-button choice-btn" id="door-1" data-num="1">
+        <span class="door-button-title">🚪 1번 문</span>
+        <span class="door-sub-penalty" id="sub-penalty-door-1"></span>
+      </button>
+      <button class="door-button choice-btn" id="door-2" data-num="2">
+        <span class="door-button-title">🚪 2번 문</span>
+        <span class="door-sub-penalty" id="sub-penalty-door-2"></span>
+      </button>
+      <button class="door-button choice-btn" id="door-3" data-num="3">
+        <span class="door-button-title">🚪 3번 문</span>
+        <span class="door-sub-penalty" id="sub-penalty-door-3"></span>
+      </button>
     </div>
 
     <!-- 1대1 가위바위보 모드 -->
     <div class="door-grid" id="rps-selection-container" style="display:none;">
-      <button class="door-button choice-btn" id="rps-1" data-num="1">✊ 바위</button>
-      <button class="door-button choice-btn" id="rps-2" data-num="2">✌️ 가위</button>
-      <button class="door-button choice-btn" id="rps-3" data-num="3">🖐️ 보</button>
+      <button class="door-button choice-btn" id="rps-1" data-num="1">
+        <span class="door-button-title">✊ 바위</span>
+        <span class="door-sub-penalty" id="sub-penalty-rps-1">내 선택: 바위</span>
+      </button>
+      <button class="door-button choice-btn" id="rps-2" data-num="2">
+        <span class="door-button-title">✌️ 가위</span>
+        <span class="door-sub-penalty" id="sub-penalty-rps-2">내 선택: 가위</span>
+      </button>
+      <button class="door-button choice-btn" id="rps-3" data-num="3">
+        <span class="door-button-title">🖐️ 보</span>
+        <span class="door-sub-penalty" id="sub-penalty-rps-3">내 선택: 보</span>
+      </button>
     </div>
 
-    <div class="penalty-preview-box" id="my-penalty-display">
-      선택하면 내 벌칙이 즉시 공개됩니다.
+    <div class="info-footer-box" id="my-footer-display">
+      원하는 문을 터치하면 내 벌칙이 즉시 표시됩니다.
     </div>
   </div>
 
@@ -360,7 +410,7 @@
     <p class="subtitle" style="font-size:1.15rem; color:#ffd700; font-weight:bold;">모두가 선택을 마쳤습니다!</p>
     <p class="subtitle" style="font-size:0.95rem; color:#fff;">결과가 곧 발표됩니다.</p>
     <div class="reveal-big-num" id="reveal-timer-num">5</div>
-    <div class="penalty-preview-box" id="reveal-my-penalty-box" style="width:90%;">
+    <div class="info-footer-box" id="reveal-my-penalty-box" style="width:90%; color:#ffd700; font-weight:bold; font-size:1.05rem;">
       내 벌칙 확인 중...
     </div>
   </div>
@@ -539,7 +589,6 @@
         if (hostTimerInterval) clearInterval(hostTimerInterval);
         showScreen('screen-game');
         
-        // 새 라운드/재경기 진입 시 내 선택값이 서버에 0이면 로컬 UI도 리셋
         if (players[myId] && players[myId].choice === 0 && myChoice !== 0) {
           resetClientChoiceUI();
         }
@@ -555,13 +604,17 @@
 
         if (!amIInDanger) {
           document.getElementById('game-status-text').innerText = '🥳 탈출 성공! 안전하게 관전 중입니다.';
-          document.getElementById('my-penalty-display').innerText = '생존 클리어 (탈출 완료)';
+          document.getElementById('my-footer-display').innerText = '생존 클리어 (탈출 완료)';
           disableAllChoices();
         } else {
-          document.getElementById('game-status-text').innerText = isRpsMode ? '가위, 바위, 보를 골라 승리하고 탈출하세요!' : '다수가 선택한 문은 탈출! 대세를 따르세요.';
+          document.getElementById('game-status-text').innerText = isRpsMode ? '가위, 바위, 보를 골라 승리하고 탈출하세요!' : '다수가 선택한 문은 탈출! 1명이 남으면 즉시 벌칙 확정!';
+          if (myChoice > 0) {
+            document.getElementById('my-footer-display').innerText = '다른 플레이어들이 선택하기를 기다리는 중... ⏳';
+          } else {
+            document.getElementById('my-footer-display').innerText = '원하는 문을 터치하면 내 벌칙이 즉시 표시됩니다.';
+          }
         }
 
-        // 전원 선택 완료 시 방장이 REVEAL 상태로 전환
         if (isHost) {
           const allChosen = dangerPlayers.length > 0 && dangerPlayers.every(p => p.choice > 0);
           if (allChosen && !room.revealTriggered) {
@@ -575,30 +628,27 @@
         }
       }
 
-      // 3. 5초 대기 화면 (REVEAL - 모든 플레이어 화면 동기화)
+      // 3. 5초 대기 화면 (REVEAL)
       if (room.status === 'REVEAL') {
         showScreen('screen-reveal');
-
-        // DB에 기록된 실시간 카운트다운 숫자를 모든 참가자 화면에 표시
         document.getElementById('reveal-timer-num').innerText = room.revealTimer !== undefined ? room.revealTimer : 5;
 
         const penalties = room.doorPenalties || {};
         const isRpsMode = (dangerPlayers.length === 2);
 
         if (!amIInDanger) {
-          document.getElementById('reveal-my-penalty-box').innerText = '탈출자 (안전)';
+          document.getElementById('reveal-my-penalty-box').innerText = '🥳 탈출자 (안전)';
         } else if (myChoice > 0) {
           if (isRpsMode) {
             const rpsNames = { 1: '✊ 바위', 2: '✌️ 가위', 3: '🖐️ 보' };
             document.getElementById('reveal-my-penalty-box').innerText = `내 선택: ${rpsNames[myChoice]}`;
           } else {
-            document.getElementById('reveal-my-penalty-box').innerText = `내 방: ${myChoice}번 문 (${penalties['door' + myChoice] || ''})`;
+            document.getElementById('reveal-my-penalty-box').innerText = `내 방: ${myChoice}번 문 ➔ ${penalties['door' + myChoice] || ''}`;
           }
         } else {
           document.getElementById('reveal-my-penalty-box').innerText = '미선택';
         }
 
-        // 방장이 1초마다 DB의 revealTimer를 차감하여 전원 브로드캐스팅
         if (isHost && !room.revealProcessed) {
           roomRef.update({ revealProcessed: true });
           if (hostTimerInterval) clearInterval(hostTimerInterval);
@@ -632,33 +682,59 @@
   function resetClientChoiceUI() {
     myChoice = 0;
     document.querySelectorAll('.choice-btn').forEach(b => {
-      b.classList.remove('selected');
+      b.classList.remove('selected', 'unselected');
       b.disabled = false;
     });
-    document.getElementById('my-penalty-display').innerText = '선택하면 내 벌칙이 즉시 공개됩니다.';
+    document.querySelectorAll('.door-sub-penalty').forEach(sp => {
+      sp.style.display = 'none';
+      sp.innerText = '';
+    });
+    document.getElementById('my-footer-display').innerText = '원하는 문을 터치하면 내 벌칙이 즉시 표시됩니다.';
   }
 
   function makeChoice(num) {
     if (myChoice > 0) return;
     myChoice = num;
 
-    document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
-    const target = document.querySelector(`[data-num="${num}"]:not([style*="display: none"])`);
-    if (target) target.classList.add('selected');
-
-    db.ref(`rooms/${currentRoomCode}/players/${myId}/choice`).set(num);
-
     db.ref(`rooms/${currentRoomCode}`).once('value', snap => {
       const room = snap.val() || {};
       const dangerCount = Object.values(room.players || {}).filter(p => p.inDanger).length;
-      if (dangerCount === 2) {
+      const isRpsMode = (dangerCount === 2);
+
+      // 선택된 버튼 및 나머지 버튼 스타일 처리
+      const targetContainer = isRpsMode ? document.getElementById('rps-selection-container') : document.getElementById('door-selection-container');
+      targetContainer.querySelectorAll('.choice-btn').forEach(b => {
+        const bNum = parseInt(b.getAttribute('data-num'));
+        if (bNum === num) {
+          b.classList.add('selected');
+          b.classList.remove('unselected');
+        } else {
+          b.classList.add('unselected');
+          b.classList.remove('selected');
+        }
+      });
+
+      // 버튼 바로 아래 뱃지 표시
+      if (isRpsMode) {
         const rpsNames = { 1: '✊ 바위', 2: '✌️ 가위', 3: '🖐️ 보' };
-        document.getElementById('my-penalty-display').innerText = `내 선택: ${rpsNames[num]} (상대방 선택 대기 중)`;
+        const badge = document.getElementById(`sub-penalty-rps-${num}`);
+        if (badge) {
+          badge.innerText = `내 선택: ${rpsNames[num]} (대기 중)`;
+          badge.style.display = 'inline-block';
+        }
       } else {
         const pen = (room.doorPenalties || {})['door' + num] || '';
-        document.getElementById('my-penalty-display').innerText = `내 방: ${num}번 문 ➔ ${pen}! (대기 중)`;
+        const badge = document.getElementById(`sub-penalty-door-${num}`);
+        if (badge) {
+          badge.innerText = `내 벌칙: ${pen} (대기 중)`;
+          badge.style.display = 'inline-block';
+        }
       }
+
+      document.getElementById('my-footer-display').innerText = '다른 플레이어들이 선택하기를 기다리는 중... ⏳';
     });
+
+    db.ref(`rooms/${currentRoomCode}/players/${myId}/choice`).set(num);
   }
 
   function renderResult(room, playerList, dangerPlayers) {
@@ -706,10 +782,10 @@
       [p1, p2].forEach(p => {
         const isWin = (p.id === winnerId);
         const div = document.createElement('div');
-        div.className = `result-row-card ${isWin ? 'escaped' : 'danger'}`;
+        div.className = `result-row-card ${isWin ? 'escaped' : (isDraw ? 'danger' : 'final-loser')}`;
         div.innerHTML = `
           <div>
-            <div style="font-weight:bold; font-size:1.05rem; color:${isWin ? '#2ed573' : '#ff4757'};">
+            <div style="font-weight:bold; font-size:1.05rem; color:${isWin ? '#2ed573' : (isDraw ? '#ffd700' : '#ff3838')};">
               ${p.name} (${rpsNames[p.choice] || '미선택'}) ${isWin ? '🥳 생존 탈출' : (isDraw ? '재경기' : '💥 최종 벌칙 당첨!')}
             </div>
           </div>
@@ -745,20 +821,44 @@
     const maxCount = chosenCounts.length > 0 ? Math.max(...chosenCounts) : 0;
     const penalties = room.doorPenalties || {};
 
-    let escapingPlayersThisRound = [];
+    let singlePlayerDoor = null;
+    for (let i = 1; i <= 3; i++) {
+      if (counts[i] === 1 && maxCount > 1) {
+        singlePlayerDoor = i;
+        break;
+      }
+    }
+
+    const allTied = (chosenCounts.length > 1 && chosenCounts.every(c => c === chosenCounts[0]));
 
     for (let i = 1; i <= 3; i++) {
-      const isEscape = (counts[i] === maxCount && maxCount > 0);
-      if (isEscape) {
-        escapingPlayersThisRound.push(...members[i]);
+      let isEscape = false;
+      let isSingleLoser = false;
+
+      if (singlePlayerDoor) {
+        if (i === singlePlayerDoor) isSingleLoser = true;
+        else if (counts[i] > 0) isEscape = true;
+      } else {
+        isEscape = (counts[i] === maxCount && maxCount > 0 && !allTied);
       }
 
       const div = document.createElement('div');
-      div.className = `result-row-card ${isEscape ? 'escaped' : 'danger'}`;
+      div.className = `result-row-card ${isSingleLoser ? 'final-loser' : (isEscape ? 'escaped' : 'danger')}`;
+      
+      let statusLabel = '⚠️ 잔류 (패배 위기)';
+      let labelColor = '#ff4757';
+      if (isEscape) {
+        statusLabel = '🥳 다수 생존 탈출!';
+        labelColor = '#2ed573';
+      } else if (isSingleLoser) {
+        statusLabel = '💥 1인 선택! 최종 벌칙 당첨!';
+        labelColor = '#ff3838';
+      }
+
       div.innerHTML = `
         <div>
-          <div style="font-weight:bold; font-size:1.02rem; color:${isEscape ? '#2ed573' : '#ff4757'};">
-            🚪 ${i}번 문 (${counts[i]}명) ${isEscape ? '🥳 다수 생존 탈출!' : '⚠️ 잔류 (패배 위기)'}
+          <div style="font-weight:bold; font-size:1.02rem; color:${labelColor};">
+            🚪 ${i}번 문 (${counts[i]}명) ${statusLabel}
           </div>
           <div style="font-size:0.85rem; color:#aaa; margin-top:3px;">
             ${members[i].map(m => m.name).join(', ') || '선택자 없음'}
@@ -771,24 +871,44 @@
       container.appendChild(div);
     }
 
-    const allTied = (chosenCounts.length > 1 && chosenCounts.every(c => c === chosenCounts[0]));
-    if (allTied) {
+    if (singlePlayerDoor) {
+      const loser = members[singlePlayerDoor][0];
+      mainTitle.innerText = '💥 최종 벌칙자 확정!';
+      summaryText.innerText = `[${loser.name}] 님이 1명만 선택하여 최종 벌칙(${penalties['door' + singlePlayerDoor]})에 당첨되었습니다!`;
+      if (isHost) {
+        nextBtn.style.display = 'none';
+        restartBtn.style.display = 'block';
+      }
+    } else if (allTied) {
       mainTitle.innerText = '🤝 동점 발생 (재경기)!';
       summaryText.innerText = '동점입니다! 아무도 탈출하지 못해 다시 선택합니다.';
+      if (isHost) {
+        nextBtn.style.display = 'block';
+        nextBtn.innerText = '🔄 재경기 시작 (방장)';
+        restartBtn.style.display = 'none';
+      }
     } else {
+      const remainingCount = dangerPlayers.length - members.reduce((acc, cur, idx) => (counts[idx] === maxCount ? acc + cur.length : acc), 0);
       mainTitle.innerText = '💥 라운드 결과';
-      summaryText.innerText = `다수 문을 선택한 ${escapingPlayersThisRound.length}명이 안전하게 탈출했습니다!`;
+      if (remainingCount === 2) {
+        summaryText.innerText = `생존자 2명 확정! 다음 라운드는 1:1 결승 가위바위보로 진행됩니다.`;
+      } else {
+        summaryText.innerText = `다수 문 선택자들이 안전하게 탈출했습니다!`;
+      }
+
+      if (isHost) {
+        nextBtn.style.display = 'block';
+        nextBtn.innerText = '🔄 다음 라운드 진행 (방장)';
+        restartBtn.style.display = 'none';
+      }
     }
 
-    if (isHost) {
-      nextBtn.style.display = 'block';
-      nextBtn.innerText = allTied ? '🔄 재경기 시작 (방장)' : '🔄 다음 라운드 진행 (방장)';
-      restartBtn.style.display = 'none';
-      waitMsg.style.display = 'none';
-    } else {
+    if (!isHost) {
       nextBtn.style.display = 'none';
       restartBtn.style.display = 'none';
       waitMsg.style.display = 'block';
+    } else {
+      waitMsg.style.display = 'none';
     }
   }
 
@@ -813,7 +933,8 @@
       const updates = {};
       Object.keys(players).forEach(pid => {
         const p = players[pid];
-        updates[`players/${pid}/choice`] = 0; // 전원 선택값 리셋
+        updates[`players/${pid}/choice`] = 0;
+        
         if (!isRpsMode && p.inDanger && !allTied) {
           const isEscape = (counts[p.choice] === maxCount && maxCount > 0);
           updates[`players/${pid}/inDanger`] = !isEscape;
