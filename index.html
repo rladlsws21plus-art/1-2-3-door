@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>술자리 3문(門) 눈치게임</title>
+  <title>술자리 3문(門) 다수결 탈출 서바이벌</title>
   
-  <!-- 카카오톡 인앱 브라우저 자동 탈출 스크립트 -->
+  <!-- 카카오톡 인앱 브라우저 자동 탈출 -->
   <script>
     (function() {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -140,6 +140,7 @@
     .btn-primary { background: #ffd700; color: #111; }
     .btn-secondary { background: #2c3246; color: #fff; }
     .btn-danger { background: #ff4757; color: #fff; }
+    .btn-success { background: #2ed573; color: #111; }
 
     /* 대기실 목록 */
     .player-list-box {
@@ -170,6 +171,10 @@
       color: #ffd700;
       font-weight: bold;
     }
+    .player-row.escaped {
+      opacity: 0.4;
+      text-decoration: line-through;
+    }
     .host-tag {
       background: #ffd700;
       color: #111;
@@ -179,12 +184,17 @@
       border-radius: 4px;
     }
 
-    /* 문 선택 */
-    .timer-header {
-      font-size: 2rem;
-      font-weight: 900;
-      color: #ff4757;
-      text-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+    /* 문 선택 및 가위바위보 */
+    .status-badge {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #ffd700;
+      background: #1e2230;
+      padding: 6px 16px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 8px;
+      border: 1px solid #3b425b;
     }
 
     .door-grid {
@@ -197,7 +207,7 @@
 
     .door-button {
       width: 100%;
-      height: 86px;
+      height: 80px;
       background: linear-gradient(145deg, #242a3c, #191c28);
       border: 2px solid #363e58;
       border-radius: 14px;
@@ -216,6 +226,10 @@
       background: #393217;
       box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
     }
+    .door-button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
 
     .penalty-preview-box {
       width: 100%;
@@ -233,7 +247,7 @@
       justify-content: center;
     }
 
-    /* 3초 긴장 대기 */
+    /* 5초 대기 화면 */
     .reveal-big-num {
       font-size: 4.5rem;
       font-weight: 900;
@@ -258,12 +272,13 @@
       align-items: center;
       border-left: 6px solid #4b5366;
     }
-    .result-row-card.trap {
+    .result-row-card.escaped {
+      border-left-color: #2ed573;
+      background: #192a20;
+    }
+    .result-row-card.danger {
       border-left-color: #ff4757;
       background: #2e1b23;
-    }
-    .result-row-card.safe {
-      border-left-color: #2ed573;
     }
   </style>
 </head>
@@ -275,7 +290,7 @@
   <div id="screen-main" class="screen active">
     <div>
       <h1>🚪 3문(門) 눈치게임</h1>
-      <p class="subtitle">다수가 몰리면 터지는 실시간 술게임</p>
+      <p class="subtitle">다수파는 탈출! 최후의 1인이 벌칙 독박!</p>
     </div>
 
     <div class="card-box">
@@ -315,51 +330,61 @@
 
   <!-- 3. 선택 단계 (PLAYING) -->
   <div id="screen-game" class="screen">
-    <div style="text-align:center;">
-      <div class="timer-header" id="game-timer">5</div>
-      <p class="subtitle">피하고 싶은 문 1개를 빠르게 선택하세요!</p>
+    <div style="text-align:center; width:100%;">
+      <div class="status-badge" id="game-round-badge">1라운드</div>
+      <p class="subtitle" id="game-status-text">모두가 선택할 때까지 기다립니다.</p>
+      <p id="game-choice-progress" style="font-size:0.8rem; color:#ffd700; margin-top:2px;">선택 완료: 0 / 0명</p>
     </div>
 
-    <div class="door-grid">
+    <!-- 3문 모드 -->
+    <div class="door-grid" id="door-selection-container">
       <button class="door-button" id="door-1" data-num="1">🚪 1번 문</button>
       <button class="door-button" id="door-2" data-num="2">🚪 2번 문</button>
       <button class="door-button" id="door-3" data-num="3">🚪 3번 문</button>
     </div>
 
+    <!-- 1대1 가위바위보 모드 -->
+    <div class="door-grid" id="rps-selection-container" style="display:none;">
+      <button class="door-button" id="rps-1" data-num="1">✊ 바위</button>
+      <button class="door-button" id="rps-2" data-num="2">✌️ 가위</button>
+      <button class="door-button" id="rps-3" data-num="3">🖐️ 보</button>
+    </div>
+
     <div class="penalty-preview-box" id="my-penalty-display">
-      문을 선택하면 내 벌칙이 즉시 공개됩니다.
+      선택하면 내 벌칙이 즉시 공개됩니다.
     </div>
   </div>
 
-  <!-- 4. 3초 대기 화면 (REVEAL) -->
-  <div id="screen-reveal" class="screen" style="justify-content:center; gap:22px;">
-    <p class="subtitle" style="font-size:1.1rem; color:#ffd700;">전원 선택 완료!</p>
-    <div class="reveal-big-num" id="reveal-timer-num">3</div>
+  <!-- 4. 5초 대기 화면 (REVEAL) -->
+  <div id="screen-reveal" class="screen" style="justify-content:center; gap:18px;">
+    <p class="subtitle" style="font-size:1.15rem; color:#ffd700; font-weight:bold;">모두가 방을 선택했습니다!</p>
+    <p class="subtitle" style="font-size:0.95rem; color:#fff;">5초 후 결과가 발표됩니다.</p>
+    <div class="reveal-big-num" id="reveal-timer-num">5</div>
     <div class="penalty-preview-box" id="reveal-my-penalty-box" style="width:90%;">
-      내 방 벌칙 확인 중...
+      내 벌칙 확인 중...
     </div>
-    <p style="font-size:0.85rem; color:#8c92a4; text-align:center;">잠시 후 최다 득표 함정 방이 공개됩니다!</p>
   </div>
 
   <!-- 5. 최종 결과 화면 (RESULT) -->
   <div id="screen-result" class="screen">
     <div style="text-align:center;">
-      <h1>💥 결과 발표</h1>
-      <p class="subtitle">가장 많은 사람이 들어간 문이 함정입니다!</p>
+      <h1 id="result-main-title">💥 라운드 결과</h1>
+      <p class="subtitle" id="result-summary-text">결과를 확인하세요!</p>
     </div>
 
-    <div style="width:100%; display:flex; flex-direction:column; gap:10px;" id="result-cards-container"></div>
+    <div style="width:100%; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin:10px 0;" id="result-cards-container"></div>
 
     <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
-      <button class="btn btn-primary" id="btn-next-round" style="display:none;">🔄 다음 판 시작 (방장)</button>
-      <p id="result-wait-msg" style="text-align:center; font-size:0.85rem; color:#aaa; display:none;">방장이 다음 판을 준비하고 있습니다...</p>
+      <button class="btn btn-primary" id="btn-next-round" style="display:none;">🔄 다음 라운드 진행 (방장)</button>
+      <button class="btn btn-success" id="btn-restart-game" style="display:none;">🎉 새 게임 시작 (로비로)</button>
+      <p id="result-wait-msg" style="text-align:center; font-size:0.85rem; color:#aaa; display:none;">방장이 다음 진행을 준비하고 있습니다...</p>
     </div>
   </div>
 
 </div>
 
 <script>
-  // 🔥 전달해주신 Firebase 설정이 정상 적용되었습니다.
+  // 🔥 Firebase 설정
   const firebaseConfig = {
     apiKey: "AIzaSyCl58pNX7c9h3XSPoIuVkYmA-gGQwVv0fo",
     authDomain: "door-games.firebaseapp.com",
@@ -375,15 +400,11 @@
   }
   const db = firebase.database();
 
-  // ----------------------------------------------------
-  // 전역 상태
-  // ----------------------------------------------------
   const myId = 'user_' + Math.random().toString(36).substr(2, 9);
   let myNickname = '';
   let currentRoomCode = '';
   let isHost = false;
   let myChoice = 0;
-  let gameCountdownTimer = null;
   let roomListener = null;
 
   function showScreen(screenId) {
@@ -391,7 +412,6 @@
     document.getElementById(screenId).classList.add('active');
   }
 
-  // 1~5잔 랜덤 셔플
   function generatePenalties() {
     const list = [1, 2, 3, 4, 5];
     for (let i = list.length - 1; i > 0; i--) {
@@ -405,7 +425,6 @@
     };
   }
 
-  // 방 만들기
   function createRoom() {
     const name = document.getElementById('input-nickname').value.trim();
     if (!name) return alert('닉네임을 입력해 주세요!');
@@ -421,7 +440,7 @@
       round: 1,
       doorPenalties: generatePenalties(),
       players: {
-        [myId]: { name: myNickname, choice: 0, isHost: true }
+        [myId]: { name: myNickname, choice: 0, inDanger: true, isHost: true }
       }
     }).then(() => {
       listenRoom(currentRoomCode);
@@ -429,7 +448,6 @@
     });
   }
 
-  // 방 입장
   function joinRoom() {
     const name = document.getElementById('input-nickname').value.trim();
     const code = document.getElementById('input-room-code').value.trim();
@@ -452,6 +470,7 @@
       roomRef.child('players/' + myId).set({
         name: myNickname,
         choice: 0,
+        inDanger: true,
         isHost: isHost
       }).then(() => {
         listenRoom(currentRoomCode);
@@ -460,7 +479,6 @@
     });
   }
 
-  // 실시간 동기화
   function listenRoom(code) {
     if (roomListener) roomListener.off();
     const roomRef = db.ref('rooms/' + code);
@@ -473,6 +491,8 @@
       const players = room.players || {};
       const playerList = Object.keys(players).map(k => ({ id: k, ...players[k] }));
       const playerCount = playerList.length;
+      const dangerPlayers = playerList.filter(p => p.inDanger);
+      const amIInDanger = players[myId] ? players[myId].inDanger : false;
 
       // 1. 대기실 (WAITING)
       if (room.status === 'WAITING') {
@@ -511,167 +531,312 @@
         showScreen('screen-lobby');
       }
 
-      // 2. 문 선택 (PLAYING)
+      // 2. 선택 단계 (PLAYING)
       if (room.status === 'PLAYING') {
         showScreen('screen-game');
-        resetDoorUI();
-        startChoiceCountdown(roomRef, playerList);
+        
+        const isRpsMode = (dangerPlayers.length === 2);
+        document.getElementById('game-round-badge').innerText = isRpsMode ? '⚔️ 1:1 결승전 (가위바위보)' : `${room.round || 1}라운드 (잔류 ${dangerPlayers.length}명)`;
+        
+        document.getElementById('door-selection-container').style.display = isRpsMode ? 'none' : 'flex';
+        document.getElementById('rps-selection-container').style.display = isRpsMode ? 'flex' : 'none';
+
+        const chosenCount = dangerPlayers.filter(p => p.choice > 0).length;
+        document.getElementById('game-choice-progress').innerText = `선택 완료: ${chosenCount} / ${dangerPlayers.length}명`;
+
+        if (!amIInDanger) {
+          document.getElementById('game-status-text').innerText = '🥳 탈출 성공! 안전하게 관전 중입니다.';
+          document.getElementById('my-penalty-display').innerText = '생존 클리어 (탈출 완료)';
+          disableAllChoices();
+        } else {
+          document.getElementById('game-status-text').innerText = isRpsMode ? '가위, 바위, 보를 골라 승리하고 탈출하세요!' : '다수가 선택한 문은 탈출! 대세를 따르세요.';
+        }
+
+        if (isHost) {
+          const allChosen = dangerPlayers.length > 0 && dangerPlayers.every(p => p.choice > 0);
+          if (allChosen && !room.revealTriggered) {
+            roomRef.update({ status: 'REVEAL', revealTriggered: true });
+          }
+        }
       }
 
-      // 3. 3초 대기 (REVEAL)
+      // 3. 5초 대기 화면 (REVEAL)
       if (room.status === 'REVEAL') {
-        clearInterval(gameCountdownTimer);
         showScreen('screen-reveal');
 
         const penalties = room.doorPenalties || {};
-        if (myChoice > 0) {
-          document.getElementById('reveal-my-penalty-box').innerText = `내 선택: ${myChoice}번 문 (${penalties['door' + myChoice]})`;
+        const isRpsMode = (dangerPlayers.length === 2);
+
+        if (!amIInDanger) {
+          document.getElementById('reveal-my-penalty-box').innerText = '탈출자 (안전)';
+        } else if (myChoice > 0) {
+          if (isRpsMode) {
+            const rpsNames = { 1: '✊ 바위', 2: '✌️ 가위', 3: '🖐️ 보' };
+            document.getElementById('reveal-my-penalty-box').innerText = `내 선택: ${rpsNames[myChoice]}`;
+          } else {
+            document.getElementById('reveal-my-penalty-box').innerText = `내 방: ${myChoice}번 문 (${penalties['door' + myChoice] || ''})`;
+          }
         } else {
-          document.getElementById('reveal-my-penalty-box').innerText = `선택하지 못함 (미선택)`;
+          document.getElementById('reveal-my-penalty-box').innerText = '미선택';
         }
 
-        if (isHost && !room.revealLock) {
-          roomRef.update({ revealLock: true });
-          let waitCount = 3;
-          document.getElementById('reveal-timer-num').innerText = waitCount;
-          const waitInterval = setInterval(() => {
-            waitCount--;
-            if (waitCount > 0) {
-              document.getElementById('reveal-timer-num').innerText = waitCount;
+        if (isHost && !room.revealProcessed) {
+          roomRef.update({ revealProcessed: true });
+          let waitTime = 5;
+          document.getElementById('reveal-timer-num').innerText = waitTime;
+          const rTimer = setInterval(() => {
+            waitTime--;
+            if (waitTime > 0) {
+              document.getElementById('reveal-timer-num').innerText = waitTime;
             } else {
-              clearInterval(waitInterval);
+              clearInterval(rTimer);
               roomRef.update({ status: 'RESULT' });
             }
           }, 1000);
         }
       }
 
-      // 4. 결과 발표 (RESULT)
+      // 4. 결과 화면 (RESULT)
       if (room.status === 'RESULT') {
         showScreen('screen-result');
-        renderResult(room, playerList);
+        renderResult(room, playerList, dangerPlayers);
       }
     });
   }
 
-  // 선택 타이머 (5초)
-  function startChoiceCountdown(roomRef, playerList) {
-    let timeLeft = 5;
-    document.getElementById('game-timer').innerText = timeLeft;
-    clearInterval(gameCountdownTimer);
-
-    gameCountdownTimer = setInterval(() => {
-      timeLeft--;
-      document.getElementById('game-timer').innerText = timeLeft;
-
-      if (isHost) {
-        const allAnswered = playerList.every(p => p.choice > 0);
-        if (allAnswered || timeLeft <= 0) {
-          clearInterval(gameCountdownTimer);
-          roomRef.update({ status: 'REVEAL', revealLock: false });
-        }
-      }
-
-      if (timeLeft <= 0) {
-        clearInterval(gameCountdownTimer);
-      }
-    }, 1000);
+  function disableAllChoices() {
+    document.querySelectorAll('.door-button').forEach(b => b.disabled = true);
   }
 
-  function resetDoorUI() {
-    document.querySelectorAll('.door-button').forEach(b => b.classList.remove('selected'));
-    document.getElementById('my-penalty-display').innerText = '문을 선택하면 내 벌칙이 즉시 공개됩니다.';
+  function resetChoiceUI() {
+    document.querySelectorAll('.door-button').forEach(b => {
+      b.classList.remove('selected');
+      b.disabled = false;
+    });
+    document.getElementById('my-penalty-display').innerText = '선택하면 내 벌칙이 즉시 공개됩니다.';
   }
 
-  function selectDoor(num) {
+  function makeChoice(num) {
     if (myChoice > 0) return;
     myChoice = num;
 
     document.querySelectorAll('.door-button').forEach(b => b.classList.remove('selected'));
-    document.getElementById('door-' + num).classList.add('selected');
+    const target = document.querySelector(`[data-num="${num}"]:not([style*="display: none"])`);
+    if (target) target.classList.add('selected');
 
     db.ref(`rooms/${currentRoomCode}/players/${myId}/choice`).set(num);
 
-    db.ref(`rooms/${currentRoomCode}/doorPenalties/door${num}`).once('value', snap => {
-      const pen = snap.val();
-      document.getElementById('my-penalty-display').innerText = `내 선택: ${num}번 문 ➔ ${pen}!`;
+    db.ref(`rooms/${currentRoomCode}`).once('value', snap => {
+      const room = snap.val() || {};
+      const dangerCount = Object.values(room.players || {}).filter(p => p.inDanger).length;
+      if (dangerCount === 2) {
+        const rpsNames = { 1: '✊ 바위', 2: '✌️ 가위', 3: '🖐️ 보' };
+        document.getElementById('my-penalty-display').innerText = `내 선택: ${rpsNames[num]} (상대방 선택 대기 중)`;
+      } else {
+        const pen = (room.doorPenalties || {})['door' + num] || '';
+        document.getElementById('my-penalty-display').innerText = `내 방: ${num}번 문 ➔ ${pen}! (대기 중)`;
+      }
     });
   }
 
-  // 결과 집계 및 판정
-  function renderResult(room, playerList) {
-    const counts = { 1: 0, 2: 0, 3: 0 };
-    const members = { 1: [], 2: [], 3: [] };
-
-    playerList.forEach(p => {
-      if (p.choice >= 1 && p.choice <= 3) {
-        counts[p.choice]++;
-        members[p.choice].push(p.name);
-      }
-    });
-
-    const maxCount = Math.max(counts[1], counts[2], counts[3]);
-    const penalties = room.doorPenalties || {};
+  function renderResult(room, playerList, dangerPlayers) {
+    const isRpsMode = (dangerPlayers.length === 2);
     const container = document.getElementById('result-cards-container');
     container.innerHTML = '';
 
+    const nextBtn = document.getElementById('btn-next-round');
+    const restartBtn = document.getElementById('btn-restart-game');
+    const waitMsg = document.getElementById('result-wait-msg');
+    const summaryText = document.getElementById('result-summary-text');
+    const mainTitle = document.getElementById('result-main-title');
+
+    // 1대1 가위바위보 판정 (이긴 자 = 탈출 / 패자 = 최종 벌칙)
+    if (isRpsMode) {
+      const p1 = dangerPlayers[0];
+      const p2 = dangerPlayers[1];
+      const rpsNames = { 1: '✊ 바위', 2: '✌️ 가위', 3: '🖐️ 보' };
+
+      let winnerId = null;
+      let isDraw = false;
+
+      if (p1.choice === p2.choice) {
+        isDraw = true;
+      } else if (
+        (p1.choice === 1 && p2.choice === 2) ||
+        (p1.choice === 2 && p2.choice === 3) ||
+        (p1.choice === 3 && p2.choice === 1)
+      ) {
+        winnerId = p1.id;
+      } else {
+        winnerId = p2.id;
+      }
+
+      if (isDraw) {
+        mainTitle.innerText = '🤝 무승부 (재경기)!';
+        summaryText.innerText = '두 플레이어의 수가 같습니다. 다시 대결합니다!';
+      } else {
+        const winner = dangerPlayers.find(p => p.id === winnerId);
+        const loser = dangerPlayers.find(p => p.id !== winnerId);
+        mainTitle.innerText = '💥 최종 패배자(벌칙 당첨) 확정!';
+        summaryText.innerText = `[${winner.name}] 탈출 성공! ➔ [${loser.name}] 최종 벌칙 수행!`;
+      }
+
+      [p1, p2].forEach(p => {
+        const isWin = (p.id === winnerId);
+        const div = document.createElement('div');
+        div.className = `result-row-card ${isWin ? 'escaped' : 'danger'}`;
+        div.innerHTML = `
+          <div>
+            <div style="font-weight:bold; font-size:1.1rem; color:${isWin ? '#2ed573' : '#ff4757'};">
+              ${p.name} (${rpsNames[p.choice] || '미선택'}) ${isWin ? '🥳 생존 탈출' : (isDraw ? '재경기' : '💥 최종 벌칙 당첨!')}
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      if (isHost) {
+        if (isDraw) {
+          nextBtn.style.display = 'block';
+          nextBtn.innerText = '🔄 가위바위보 재경기';
+          restartBtn.style.display = 'none';
+        } else {
+          nextBtn.style.display = 'none';
+          restartBtn.style.display = 'block';
+        }
+      }
+      return;
+    }
+
+    // 3문 다수결 판정 (최다 득표 = 생존 탈출 / 소수 = 잔류)
+    const counts = { 1: 0, 2: 0, 3: 0 };
+    const members = { 1: [], 2: [], 3: [] };
+
+    dangerPlayers.forEach(p => {
+      if (p.choice >= 1 && p.choice <= 3) {
+        counts[p.choice]++;
+        members[p.choice].push(p);
+      }
+    });
+
+    const chosenCounts = [1, 2, 3].map(d => counts[d]).filter(c => c > 0);
+    const maxCount = chosenCounts.length > 0 ? Math.max(...chosenCounts) : 0;
+    const penalties = room.doorPenalties || {};
+
+    let escapingPlayersThisRound = [];
+
     for (let i = 1; i <= 3; i++) {
-      const isTrap = (counts[i] === maxCount && maxCount > 0);
+      const isEscape = (counts[i] === maxCount && maxCount > 0);
+      if (isEscape) {
+        escapingPlayersThisRound.push(...members[i]);
+      }
+
       const div = document.createElement('div');
-      div.className = `result-row-card ${isTrap ? 'trap' : 'safe'}`;
+      div.className = `result-row-card ${isEscape ? 'escaped' : 'danger'}`;
       div.innerHTML = `
         <div>
-          <div style="font-weight:bold; font-size:1.1rem; color:${isTrap ? '#ff4757' : '#2ed573'};">
-            🚪 ${i}번 문 (${counts[i]}명) ${isTrap ? '💥 당첨(함정)' : '🥳 생존'}
+          <div style="font-weight:bold; font-size:1.05rem; color:${isEscape ? '#2ed573' : '#ff4757'};">
+            🚪 ${i}번 문 (${counts[i]}명) ${isEscape ? '🥳 다수 생존 탈출!' : '⚠️ 잔류 (패배 위기)'}
           </div>
           <div style="font-size:0.85rem; color:#aaa; margin-top:3px;">
-            ${members[i].length > 0 ? members[i].join(', ') : '선택자 없음'}
+            ${members[i].map(m => m.name).join(', ') || '선택자 없음'}
           </div>
         </div>
-        <div style="font-weight:bold; font-size:1rem; color:#ffd700; text-align:right;">
-          ${penalties['door' + i]}
+        <div style="font-weight:bold; font-size:0.95rem; color:#ffd700; text-align:right;">
+          ${penalties['door' + i] || ''}
         </div>
       `;
       container.appendChild(div);
     }
 
-    const nextBtn = document.getElementById('btn-next-round');
-    const waitMsg = document.getElementById('result-wait-msg');
+    const allTied = (chosenCounts.length > 1 && chosenCounts.every(c => c === chosenCounts[0]));
+    if (allTied) {
+      summaryText.innerText = '동점 발생! 아무도 탈출하지 못해 전원 재경기를 진행합니다.';
+    } else {
+      summaryText.innerText = `다수 문을 선택한 ${escapingPlayersThisRound.length}명이 안전하게 탈출했습니다!`;
+    }
+
     if (isHost) {
       nextBtn.style.display = 'block';
+      nextBtn.innerText = '🔄 다음 라운드 진행 (방장)';
+      restartBtn.style.display = 'none';
       waitMsg.style.display = 'none';
     } else {
       nextBtn.style.display = 'none';
+      restartBtn.style.display = 'none';
       waitMsg.style.display = 'block';
     }
   }
 
-  // 다음 판 진행
   function nextRound() {
     if (!isHost) return;
     const roomRef = db.ref('rooms/' + currentRoomCode);
 
-    roomRef.child('players').once('value', snap => {
-      const players = snap.val() || {};
+    roomRef.once('value', snap => {
+      const room = snap.val() || {};
+      const players = room.players || {};
+      const dangerPlayers = Object.keys(players).map(k => ({ id: k, ...players[k] })).filter(p => p.inDanger);
+
+      const isRpsMode = (dangerPlayers.length === 2);
+      const counts = { 1: 0, 2: 0, 3: 0 };
+      dangerPlayers.forEach(p => {
+        if (p.choice >= 1 && p.choice <= 3) counts[p.choice]++;
+      });
+      const chosenCounts = [1, 2, 3].map(d => counts[d]).filter(c => c > 0);
+      const maxCount = chosenCounts.length > 0 ? Math.max(...chosenCounts) : 0;
+      const allTied = (chosenCounts.length > 1 && chosenCounts.every(c => c === chosenCounts[0]));
+
+      const updates = {};
+      Object.keys(players).forEach(pid => {
+        const p = players[pid];
+        updates[`players/${pid}/choice`] = 0;
+        // 3문 다수결 모드일 때: 최다 득표 다수파는 inDanger: false (탈출 성공)
+        if (!isRpsMode && p.inDanger && !allTied) {
+          const isEscape = (counts[p.choice] === maxCount && maxCount > 0);
+          updates[`players/${pid}/inDanger`] = !isEscape;
+        }
+      });
+
+      updates['status'] = 'PLAYING';
+      updates['round'] = (room.round || 1) + 1;
+      updates['doorPenalties'] = generatePenalties();
+      updates['revealTriggered'] = false;
+      updates['revealProcessed'] = false;
+
+      roomRef.update(updates).then(() => {
+        resetChoiceUI();
+      });
+    });
+  }
+
+  function restartGameToLobby() {
+    if (!isHost) return;
+    const roomRef = db.ref('rooms/' + currentRoomCode);
+    roomRef.once('value', snap => {
+      const room = snap.val() || {};
+      const players = room.players || {};
       const updates = {};
       Object.keys(players).forEach(pid => {
         updates[`players/${pid}/choice`] = 0;
+        updates[`players/${pid}/inDanger`] = true;
       });
-      updates['status'] = 'PLAYING';
-      updates['doorPenalties'] = generatePenalties();
-      updates['revealLock'] = false;
+      updates['status'] = 'WAITING';
+      updates['round'] = 1;
+      updates['revealTriggered'] = false;
+      updates['revealProcessed'] = false;
       roomRef.update(updates);
     });
   }
 
-  // pointerdown 초고속 터치 바인딩
   document.getElementById('btn-create-room').addEventListener('pointerdown', createRoom);
   document.getElementById('btn-join-room').addEventListener('pointerdown', joinRoom);
   document.getElementById('btn-start-game').addEventListener('pointerdown', () => { if (isHost) nextRound(); });
   document.getElementById('btn-next-round').addEventListener('pointerdown', nextRound);
+  document.getElementById('btn-restart-game').addEventListener('pointerdown', restartGameToLobby);
 
   [1, 2, 3].forEach(num => {
-    document.getElementById('door-' + num).addEventListener('pointerdown', () => selectDoor(num));
+    document.getElementById('door-' + num).addEventListener('pointerdown', () => makeChoice(num));
+    document.getElementById('rps-' + num).addEventListener('pointerdown', () => makeChoice(num));
   });
 
   document.getElementById('btn-leave-room').addEventListener('pointerdown', () => {
